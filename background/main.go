@@ -110,13 +110,6 @@ func CreateHostAndPublishName(ctx context.Context, rendezvous string, name strin
 
 			if peer.ID > host.ID() {
 				log.Println("Found peer: ", peer, ", id is greater than us, wait for it to connect to us")
-
-				nameTopic.Publish(ctx, []byte(name))
-
-				if err != nil {
-					log.Fatalln(err)
-				}
-
 			} else {
 				log.Println("Found peer: ", peer, ", connecting")
 
@@ -126,14 +119,13 @@ func CreateHostAndPublishName(ctx context.Context, rendezvous string, name strin
 					log.Println(err)
 					continue
 				}
-
-				err = nameTopic.Publish(ctx, []byte(name))
-
-				if err != nil {
-					log.Fatalln(err)
-				}
 			}
 
+			err = nameTopic.Publish(ctx, []byte(name))
+
+			if err != nil {
+				log.Fatalln(err)
+			}
 		}
 	}()
 
