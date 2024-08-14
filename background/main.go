@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -25,29 +27,33 @@ import (
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
 
 func main() {
-	_, err := net.Dial("tcp4", "localhost:12000")
+	group, name, port := CreateFlag()
+
+	conn, err := net.Dial("tcp4", fmt.Sprintf("127.0.0.1:%d", port))
 
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	ctx := context.Background()
-	friends := []peerName{}
+	friends := []PeerName{}
 
-	group, name := "default", fmt.Sprintf("BT-%d", rand.Int())
-	_, _ = CreateHostAndExchangeInfo(ctx, group, name, friends)
+	_, _ = CreateHostAndExchangeInfo(ctx, group, name, friends, conn)
+
+	select {}
 }
 
-func CreateFlag() (string, string) {
+func CreateFlag() (string, string, int) {
 	group := flag.String("group", "default", "group(mdns rendezvous)")
 	name := flag.String("name", fmt.Sprintf("BT-%d", rand.Int()), "user nick name")
+	port := flag.Int("port", 12000, "local port")
 
 	flag.Parse()
 
-	return *group, *name
+	return *group, *name, *port
 }
 
-func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name string, friends []peerName) (host.Host, *pubsub.PubSub) {
+func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name string, friends []PeerName, conn net.Conn) (host.Host, *pubsub.PubSub) {
 	host, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/0"),
 		libp2p.Security(noise.ID, noise.New),
@@ -57,24 +63,35 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 	if err != nil {
 		log.Fatalln(err)
+		WritePacket(conn, PanicError, []string{err.Error()})
 	} else {
+		addrs := make([]string, len(host.Addrs()))
+
+		for i, v := range host.Addrs() {
+			addrs[i] = v.String()
+		}
+
 		log.Println("Self:", host.Addrs(), host.ID())
+		WritePacket(conn, CreateHost, append(addrs, host.ID().String()))
 	}
 
 	ps, err := pubsub.NewGossipSub(ctx, host)
 
 	if err != nil {
 		log.Fatalln(err)
+		WritePacket(conn, PanicError, []string{err.Error()})
 	}
 
-	peerChan := InitMDNS(host, rendezvous)
+	peerChan := InitMDNS(host, rendezvous, conn)
 
 	go func() {
 		host.SetStreamHandler(protocol.ID(NameExchangeProtocol), func(stream network.Stream) {
 			buf := make([]byte, 1024)
 			stream.Read(buf)
 
-			friends = append(friends, peerName{
+			buf = bytes.Trim(buf, "\x00")
+
+			friends = append(friends, PeerName{
 				peer.AddrInfo{
 					ID:    stream.Conn().RemotePeer(),
 					Addrs: []multiaddr.Multiaddr{stream.Conn().RemoteMultiaddr()},
@@ -82,7 +99,8 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 				string(buf),
 			})
 
-			log.Println("Add:", stream.Conn().RemoteMultiaddr().String(), string(buf))
+			log.Println("Add:", stream.Conn().RemoteMultiaddr().String(), stream.Conn().RemotePeer(), string(buf))
+			WritePacket(conn, FoundPeer, []string{stream.Conn().RemoteMultiaddr().String(), stream.Conn().RemotePeer().String(), string(buf)})
 		})
 
 		for {
@@ -92,6 +110,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 			if err != nil {
 				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
 				continue
 			}
 
@@ -99,6 +118,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 			if err != nil {
 				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
 				continue
 			}
 
@@ -106,6 +126,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 			if err != nil {
 				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
 				continue
 			}
 
@@ -113,6 +134,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 			if err != nil {
 				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
 				continue
 			}
 		}
@@ -127,6 +149,8 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 
 				if err != nil {
 					log.Println("Remove:", v.info.ID)
+					WritePacket(conn, RemovePeer, []string{v.info.ID.String()})
+
 					friends = append(friends[:i], friends[i+1:]...)
 
 					continue
@@ -138,21 +162,54 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 	return host, ps
 }
 
-type peerName struct {
+func WritePacket(conn net.Conn, msgCode int, msg []string) {
+	packet := &Packet{
+		TS:      time.Now().String(),
+		MsgCode: msgCode,
+		Msg:     msg,
+	}
+
+	json, err := json.Marshal(packet)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	buf := make([]byte, 1024)
+	copy(buf, []byte(string(json)))
+
+	if len(buf) > 1024 {
+		WritePacket(conn, DeniedError, []string{"packet size over 1000"})
+	} else {
+		_, err = conn.Write(buf)
+
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+}
+
+type PeerName struct {
 	info peer.AddrInfo
 	name string
 }
 
-type discoveryNotifee struct {
+type DiscoveryNotifee struct {
 	PeerChan chan peer.AddrInfo
 }
 
-func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
+type Packet struct {
+	TS      string
+	MsgCode int
+	Msg     []string
+}
+
+func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	n.PeerChan <- pi
 }
 
-func InitMDNS(peerhost host.Host, rendezvous string) chan peer.AddrInfo {
-	n := &discoveryNotifee{}
+func InitMDNS(peerhost host.Host, rendezvous string, conn net.Conn) chan peer.AddrInfo {
+	n := &DiscoveryNotifee{}
 	n.PeerChan = make(chan peer.AddrInfo)
 
 	ser := mdns.NewMdnsService(peerhost, rendezvous, n)
@@ -161,6 +218,7 @@ func InitMDNS(peerhost host.Host, rendezvous string) chan peer.AddrInfo {
 
 	if err != nil {
 		log.Fatalln(err)
+		WritePacket(conn, PanicError, []string{err.Error()})
 	}
 
 	return n.PeerChan
