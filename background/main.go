@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -24,6 +25,12 @@ import (
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
 
 func main() {
+	_, err := net.Dial("tcp4", "localhost:12000")
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	ctx := context.Background()
 	friends := []peerName{}
 
