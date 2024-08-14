@@ -22,31 +22,26 @@ import (
 
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
 
-type peerName struct {
-	ma   multiaddr.Multiaddr
-	name string
-}
-
 func main() {
 	ctx := context.Background()
-	fs := []peerName{}
+	friends := []peerName{}
 
-	rz, name := CreateFlag()
-	_ = CreateHostAndPublishName(ctx, rz, name, fs)
+	group, name := CreateFlag()
+	_, _ = CreateHostAndExchangeInfo(ctx, group, name, friends)
 
 	select {}
 }
 
 func CreateFlag() (string, string) {
-	rz := flag.String("group", "default", "group(mdns rendezvous)")
+	group := flag.String("group", "default", "group(mdns rendezvous)")
 	name := flag.String("name", fmt.Sprintf("BT-%d", rand.Int()), "user nick name")
 
 	flag.Parse()
 
-	return *rz, *name
+	return *group, *name
 }
 
-func CreateHostAndPublishName(ctx context.Context, rendezvous string, name string, fs []peerName) host.Host {
+func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name string, friends []peerName) (host.Host, *pubsub.PubSub) {
 	host, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/0"),
 		libp2p.Security(noise.ID, noise.New),
@@ -60,7 +55,7 @@ func CreateHostAndPublishName(ctx context.Context, rendezvous string, name strin
 		log.Println(host.Addrs(), host.ID())
 	}
 
-	_, err = pubsub.NewGossipSub(ctx, host)
+	ps, err := pubsub.NewGossipSub(ctx, host)
 
 	if err != nil {
 		log.Fatalln(err)
@@ -73,7 +68,7 @@ func CreateHostAndPublishName(ctx context.Context, rendezvous string, name strin
 			buf := make([]byte, 1024)
 			stream.Read(buf)
 
-			fs = append(fs, peerName{
+			friends = append(friends, peerName{
 				stream.Conn().RemoteMultiaddr(),
 				string(buf),
 			})
@@ -114,7 +109,12 @@ func CreateHostAndPublishName(ctx context.Context, rendezvous string, name strin
 		}
 	}()
 
-	return host
+	return host, ps
+}
+
+type peerName struct {
+	ma   multiaddr.Multiaddr
+	name string
 }
 
 type discoveryNotifee struct {
