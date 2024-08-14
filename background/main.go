@@ -1,4 +1,4 @@
-package main
+package infoin
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -15,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	"github.com/libp2p/go-libp2p/p2p/muxer/yamux"
+	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
@@ -22,7 +25,14 @@ import (
 
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
 
-func main() {
+func infoin() {
+	conn, err := net.Dial("tcp4", "localhost:12000")
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer conn.Close()
+
 	ctx := context.Background()
 	friends := []peerName{}
 
@@ -69,7 +79,10 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 			stream.Read(buf)
 
 			friends = append(friends, peerName{
-				stream.Conn().RemoteMultiaddr(),
+				peer.AddrInfo{
+					ID:    stream.Conn().RemotePeer(),
+					Addrs: []multiaddr.Multiaddr{stream.Conn().RemoteMultiaddr()},
+				},
 				string(buf),
 			})
 
@@ -109,11 +122,46 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 		}
 	}()
 
+	go func() {
+		for {
+			for ii, vv := range friends {
+				v := vv
+				i := ii
+
+				go func() {
+					host.Connect(ctx, v.info)
+
+					pingChan := ping.Ping(ctx, host, v.info.ID)
+					pingCount := 0
+
+					for i := 0; i < 5; i++ {
+						select {
+						case _ = <-pingChan:
+							pingCount++
+							log.Println("Good: ", v.info.ID)
+						case <-time.After(2 * time.Second):
+							log.Println("Bad: ", v.info.ID)
+						}
+					}
+
+					if pingCount < 3 {
+						log.Println("Remove: ", v.info.ID)
+						friends = append(friends[:i], friends[i+1:]...)
+					}
+
+					host.Close()
+				}()
+			}
+
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	return host, ps
 }
 
 type peerName struct {
-	ma   multiaddr.Multiaddr
+	info peer.AddrInfo
 	name string
 }
 
