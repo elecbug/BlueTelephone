@@ -24,20 +24,11 @@ import (
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
 
 func main() {
-	// conn, err := net.Dial("tcp4", "localhost:12000")
-
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// defer conn.Close()
-
 	ctx := context.Background()
 	friends := []peerName{}
 
-	group, name := CreateFlag()
+	group, name := "default", fmt.Sprintf("BT-%d", rand.Int())
 	_, _ = CreateHostAndExchangeInfo(ctx, group, name, friends)
-
-	select {}
 }
 
 func CreateFlag() (string, string) {

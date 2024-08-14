@@ -10,6 +10,8 @@ require (
 )
 
 require (
+	github.com/AllenDang/gform v0.0.0-20130830051017-6bb9f0d6b77e // indirect
+	github.com/AllenDang/w32 v0.0.0-20180428130237-ad0a36d80adc // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -114,6 +116,7 @@ require (
 	github.com/quic-go/quic-go v0.45.2 // indirect
 	github.com/quic-go/webtransport-go v0.8.0 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
+	github.com/rodrigocfd/windigo v0.0.0-20230809154420-8faa606d9f5f // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect

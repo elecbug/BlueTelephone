@@ -7,6 +7,10 @@ dmitri.shuralyov.com/html/belt v0.0.0-20180602232347-f7d459c86be0/go.mod h1:JLBr
 dmitri.shuralyov.com/service/change v0.0.0-20181023043359-a85b471d5412/go.mod h1:a1inKt/atXimZ4Mv927x+r7UpyzRUf4emIoiiSC2TN4=
 dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D6DFvNNtx+9ybjezNCa8XF0xaYcETyp6rHWU=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
+github.com/AllenDang/gform v0.0.0-20130830051017-6bb9f0d6b77e h1:ydyNRilv6v0XpkJ5bHCXdRpfLt/Tr/Rr3EkcX3kmzbY=
+github.com/AllenDang/gform v0.0.0-20130830051017-6bb9f0d6b77e/go.mod h1:Xw5E2XAXNKUG16G8mFPJ2UipVEnkiBcr2ak7H3Az238=
+github.com/AllenDang/w32 v0.0.0-20180428130237-ad0a36d80adc h1:w3fW4b1hPf6/cfdQQ/vu9V8eBeQmuLZIaUMj81nIzYQ=
+github.com/AllenDang/w32 v0.0.0-20180428130237-ad0a36d80adc/go.mod h1:1rHKulT5eD2DzdKxDXUZRKtBfkTzLmTL42ZmEmOfyrs=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
@@ -339,6 +343,8 @@ github.com/quic-go/webtransport-go v0.8.0 h1:HxSrwun11U+LlmwpgM1kEqIqH90IT4N8auv
 github.com/quic-go/webtransport-go v0.8.0/go.mod h1:N99tjprW432Ut5ONql/aUhSLT0YVSlwHohQsuac9WaM=
 github.com/raulk/go-watchdog v1.3.0 h1:oUmdlHxdkXRJlwfG0O9omj8ukerm8MEQavSiDTEtBsk=
 github.com/raulk/go-watchdog v1.3.0/go.mod h1:fIvOnLbF0b0ZwkB9YU4mOW9Did//4vPZtDqv66NfsMU=
+github.com/rodrigocfd/windigo v0.0.0-20230809154420-8faa606d9f5f h1:jIXpgDE/hOglaKyTP5ZRqe6rhcJx2dtCan2ncR66qhU=
+github.com/rodrigocfd/windigo v0.0.0-20230809154420-8faa606d9f5f/go.mod h1:Vw0QLpSedVsbAFWYIVE/Zb1pa6XPIgwIMTUQQoUG8Wo=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
