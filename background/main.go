@@ -179,7 +179,7 @@ func WritePacket(conn net.Conn, msgCode int, msg []string) {
 	copy(buf, []byte(string(json)))
 
 	if len(buf) > 1024 {
-		WritePacket(conn, DeniedError, []string{"packet size over 1000"})
+		WritePacket(conn, DeniedError, []string{"packet size over 1024"})
 	} else {
 		_, err = conn.Write(buf)
 
