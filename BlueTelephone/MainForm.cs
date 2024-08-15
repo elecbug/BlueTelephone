@@ -272,9 +272,20 @@ namespace BlueTelephone
             {
                 Task<TcpClient> task = Listener.AcceptTcpClientAsync();
 
+                string background = "";
+
+                if (File.Exists("blue-telephone-d.exe") == true)
+                {
+                    background = "blue-telephone-d.exe";
+                }
+                if (File.Exists("../../../../background/blue-telephone-d.exe") == true)
+                {
+                    background = "../../../../background/blue-telephone-d.exe";
+                }
+
                 Process = Process.Start(new ProcessStartInfo()
                 {
-                    FileName = "../../../../background/blue-telephone-d.exe",
+                    FileName = background,
                     Arguments = $"--group {GroupTextBox.Text} --name {NameTextBox.Text} --port {port}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
