@@ -11,10 +11,15 @@ namespace BlueTelephone
     {
         private TextBox? GroupTextBox { get; set; }
         private TextBox? NameTextBox { get; set; }
-        private RichTextBox? InfoLabel { get; set; }
+        private TextBox? GossipTextBox { get; set; }
+        private RichTextBox? InfoTextBox { get; set; }
         private ListBox? PeerListBox { get; set; }
+        private TabControl? GossipTabControl { get; set; }
+        private Button? ConnectButton { get; set; }
+        private Button? GossipButton { get; set; }
 
         private TcpListener? Listener { get; set; }
+        private TcpClient? Client { get; set; }
         private Process? Process { get; set; }
 
         private List<string> Multiaddrs { get; set; } = new List<string>();
@@ -42,22 +47,23 @@ namespace BlueTelephone
                 Dock = DockStyle.Fill,
             };
 
+            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
             panel.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
+            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
             panel.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
+            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
 
             panel.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
-            panel.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
-            panel.ColumnStyles.Add(new ColumnStyle() { Width = 150, SizeType = SizeType.Absolute });
+            panel.ColumnStyles.Add(new ColumnStyle() { Width = 6, SizeType = SizeType.Percent });
+            panel.ColumnStyles.Add(new ColumnStyle() { Width = 100, SizeType = SizeType.Absolute });
 
             panel.Controls.Add(new Label()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
                 Text = "Group",
-                TextAlign = ContentAlignment.MiddleCenter,
+                TextAlign = ContentAlignment.MiddleRight,
             }, 0, 0);
 
             panel.Controls.Add(new Label()
@@ -65,7 +71,7 @@ namespace BlueTelephone
                 Visible = true,
                 Dock = DockStyle.Fill,
                 Text = "Name",
-                TextAlign = ContentAlignment.MiddleCenter,
+                TextAlign = ContentAlignment.MiddleRight,
             }, 0, 1);
 
             panel.Controls.Add(new Label()
@@ -73,7 +79,7 @@ namespace BlueTelephone
                 Visible = true,
                 Dock = DockStyle.Fill,
                 Text = "Info",
-                TextAlign = ContentAlignment.MiddleCenter,
+                TextAlign = ContentAlignment.MiddleRight,
             }, 0, 2);
 
             panel.Controls.Add(new Label()
@@ -96,12 +102,14 @@ namespace BlueTelephone
                 Dock = DockStyle.Fill,
             }, 1, 1);
 
-            panel.Controls.Add(InfoLabel = new RichTextBox()
+            panel.Controls.Add(InfoTextBox = new RichTextBox()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
             }, 1, 2);
+
+            panel.SetColumnSpan(InfoTextBox, 2);
 
             panel.Controls.Add(PeerListBox = new ListBox()
             {
@@ -116,24 +124,144 @@ namespace BlueTelephone
                 e.Value = strs.Last() + " (" + strs[1][0..15] + "...)";
             };
 
-            Button button = new Button()
+            panel.Controls.Add(ConnectButton = new Button()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
                 Text = "Connect",
-            };
+            }, 2, 0);
 
-            panel.Controls.Add(button, 2, 0);
-            panel.SetRowSpan(button, 2);
+            panel.SetRowSpan(ConnectButton, 2);
 
-            button.Click += ConnectButtonClick;
+            ConnectButton.Click += ConnectButtonClick;
+
+            panel.Controls.Add(GossipTabControl = new TabControl()
+            {
+                Visible = true,
+                Dock = DockStyle.Fill,
+            }, 1, 3);
+
+            panel.SetRowSpan(GossipTabControl, 2);
+            panel.SetColumnSpan(GossipTabControl, 2);
+
+            panel.Controls.Add(GossipTextBox = new TextBox()
+            {
+                Visible = true,
+                Dock = DockStyle.Fill,
+                Enabled = false,
+            }, 1, 5);
+
+            GossipTextBox.TextChanged += GossipTextBoxTextChanged;
+
+            panel.Controls.Add(GossipButton = new Button()
+            {
+                Visible = true,
+                Dock = DockStyle.Fill,
+                Text = "Join/Exit",
+                Enabled = false,
+            }, 2, 5);
+
+            GossipButton.Click += GossipButtonClick;
+        }
+
+        private void GossipTextBoxTextChanged(object? sender, EventArgs e)
+        {
+            if (GossipTextBox!.Text == "")
+            {
+                GossipButton!.Text = "Join/Exit";
+            }
+            else
+            {
+                foreach (GossipTabPage page in GossipTabControl!.TabPages)
+                {
+                    if (GossipTextBox!.Text == page.Text)
+                    {
+                        GossipButton!.Text = "Exit";
+                        return;
+                    }
+                }
+
+                GossipButton!.Text = "Join";
+            }
+        }
+
+        private void GossipButtonClick(object? sender, EventArgs e)
+        {
+            foreach (TabPage page in GossipTabControl!.TabPages)
+            {
+                if (page.Text == GossipTextBox!.Text)
+                {
+                    if (MessageBox.Show("Exits the room?", "Warning", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        string json1 = JsonSerializer.Serialize(new Packet()
+                        {
+                            TS = DateTime.Now.ToString(),
+                            MsgCode = (int)MsgCode.ExitGossip,
+                            Msg = new List<string> { page.Text }
+                        });
+
+                        byte[] data1 = Encoding.UTF8.GetBytes(json1);
+                        byte[] buf1 = new byte[1024];
+
+                        for (int i = 0; i < data1.Length; i++)
+                        {
+                            buf1[i] = data1[i];
+                        }
+
+                        Client!.GetStream().Write(buf1);
+
+                        GossipTextBox!.Text = "";
+                        GossipTabControl!.TabPages.Remove(page);
+                    }
+
+                    return;
+                }
+            }
+
+            string json = JsonSerializer.Serialize(new Packet()
+            {
+                TS = DateTime.Now.ToString(),
+                MsgCode = (int)MsgCode.JoinGossip,
+                Msg = new List<string> { GossipTextBox!.Text }
+            });
+
+            byte[] data = Encoding.UTF8.GetBytes(json);
+            byte[] buf = new byte[1024];
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                buf[i] = data[i];
+            }
+
+            Client!.GetStream().Write(buf);
+
+            GossipTabControl!.TabPages.Add(new GossipTabPage(Client, GossipTextBox!.Text)
+            {
+                Text = GossipTextBox!.Text,
+            });
+
+            GossipTabControl!.SelectTab(GossipTabControl!.TabPages.Count - 1);
+
+            GossipTextBox!.Text = "";
         }
 
         private void ConnectButtonClick(object? sender, EventArgs e)
         {
+            if (GroupTextBox?.Text == "")
+            {
+                GroupTextBox.Text = "default";
+            }
+            if (NameTextBox?.Text == "")
+            {
+                NameTextBox.Text = $"BT-{new Random().Next()}";
+            }
+
             (sender as Button)!.Enabled = false;
             GroupTextBox!.Enabled = false;
             NameTextBox!.Enabled = false;
+
+            GossipTextBox!.Enabled = true;
+            GossipButton!.Enabled = true;
 
             int port = new Random().Next(0, 1 << 16);
 
@@ -154,14 +282,14 @@ namespace BlueTelephone
                     CreateNoWindow = true,
                 });
 
-                TcpClient client = await task;
+                Client = await task;
 
                 try
                 {
                     while (true)
                     {
                         byte[] buffer = new byte[1024];
-                        client.GetStream().Read(buffer, 0, 1024);
+                        Client.GetStream().Read(buffer, 0, 1024);
 
                         string json = Encoding.UTF8.GetString(buffer).TrimEnd('\0');
                         Debug.WriteLine(json);
@@ -176,13 +304,13 @@ namespace BlueTelephone
                         switch ((MsgCode)packet.MsgCode)
                         {
                             case MsgCode.PanicError:
-                                MessageBox.Show(string.Join("\r\n", packet.Msg), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                MessageBox.Show(string.Join("\n", packet.Msg), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 Close();
 
                                 break;
 
                             case MsgCode.DeniedError:
-                                MessageBox.Show(string.Join("\r\n", packet.Msg), "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                MessageBox.Show(string.Join("\n", packet.Msg), "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
                                 break;
 
@@ -195,7 +323,7 @@ namespace BlueTelephone
                                 Multiaddrs.Add("");
                                 PeerID = packet.Msg.Last();
 
-                                InfoLabel!.Invoke(() => InfoLabel!.Text = string.Join($"/{PeerID}\r\n", Multiaddrs));
+                                InfoTextBox!.Invoke(() => InfoTextBox!.Text = string.Join($"/{PeerID}\n", Multiaddrs).TrimEnd('\n'));
 
                                 break;
 
@@ -208,6 +336,41 @@ namespace BlueTelephone
                             case MsgCode.RemovePeer:
                                 object closer = Closers.First(x => x[1] == packet.Msg.First());
                                 PeerListBox!.Invoke(() => PeerListBox!.Items.Remove(closer));
+
+                                break;
+
+                            case MsgCode.GotGossip:
+                                foreach (GossipTabPage item in GossipTabControl!.TabPages)
+                                {
+                                    if (item.Text == packet.Msg[0])
+                                    {
+                                        List<string>? strs = Closers.FirstOrDefault(x => x[1] == packet.Msg[1]);
+
+                                        if (strs == null)
+                                        {
+                                            item.Output.Invoke(() =>
+                                            {
+                                                item.Output.Text += "You: " + packet.Msg[2] + "\n";
+
+                                                item.Output.SelectionStart = item.Output.Text.Length - 1;
+                                                item.Output.ScrollToCaret();
+                                            });
+                                        }
+                                        else
+                                        {
+                                            item.Output.Invoke(() =>
+                                            {
+                                                item.Output.Text += strs.Last() + " ("
+                                                    + strs[1][0..15] + "...)" + ": " + packet.Msg[2] + "\n";
+
+                                                item.Output.SelectionStart = item.Output.Text.Length - 1;
+                                                item.Output.ScrollToCaret();
+                                            });
+                                        }
+
+                                        break;
+                                    }
+                                }
 
                                 break;
                         }
@@ -235,5 +398,9 @@ namespace BlueTelephone
         CreateHost = 2,
         FoundPeer = 3,
         RemovePeer = 4,
+        JoinGossip = 5,
+        ExitGossip = 6,
+        Publish = 7,
+        GotGossip = 8,
     }
 }

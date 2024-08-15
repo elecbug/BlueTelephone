@@ -7,4 +7,8 @@ const (
 	CreateHost  = 2
 	FoundPeer   = 3
 	RemovePeer  = 4
+	JoinGossip  = 5
+	ExitGossip  = 6
+	Publish     = 7
+	GotGossip   = 8
 )

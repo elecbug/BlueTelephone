@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -37,10 +38,118 @@ func main() {
 
 	ctx := context.Background()
 	friends := []PeerName{}
+	topics := []Topic{}
 
-	_, _ = CreateHostAndExchangeInfo(ctx, group, name, friends, conn)
+	_, gossip := CreateHostAndExchangeInfo(ctx, group, name, friends, conn)
 
-	select {}
+	for {
+		buf := make([]byte, 1024)
+
+		_, err := conn.Read(buf)
+
+		if err != nil {
+			log.Println(err)
+			WritePacket(conn, DeniedError, []string{err.Error()})
+			continue
+		}
+
+		var packet Packet
+
+		err = json.Unmarshal([]byte(strings.TrimRight(string(buf), "\x00")), &packet)
+
+		if err != nil {
+			log.Println(err)
+			WritePacket(conn, DeniedError, []string{err.Error()})
+			continue
+		}
+
+		switch packet.MsgCode {
+		case JoinGossip:
+			topic, err := gossip.Join(packet.Msg[0])
+
+			if err != nil {
+				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
+				continue
+			}
+			sub, err := topic.Subscribe()
+
+			if err != nil {
+				log.Println(err)
+				WritePacket(conn, DeniedError, []string{err.Error()})
+				continue
+			}
+
+			topicCtx, cancelCtx := context.WithCancel(ctx)
+
+			topics = append(topics, Topic{
+				topic:  topic,
+				sub:    sub,
+				ctx:    topicCtx,
+				cancel: cancelCtx,
+			})
+
+			go func() {
+				for {
+					msg, err := sub.Next(topicCtx)
+
+					if err != nil {
+						if err.Error() != "context canceled" {
+							log.Println(err)
+							WritePacket(conn, DeniedError, []string{err.Error()})
+						} else {
+							log.Println(err)
+							WritePacket(conn, Success, []string{err.Error()})
+
+							break
+						}
+					} else {
+						log.Println("got msg", string(msg.Data), "from", msg.ReceivedFrom.String(), "in topic", topic.String())
+						WritePacket(conn, GotGossip, []string{topic.String(), msg.ReceivedFrom.String(), string(msg.Data)})
+					}
+				}
+			}()
+
+			log.Println("Success joins topic")
+			WritePacket(conn, Success, []string{"Success joins topic"})
+
+		case ExitGossip:
+			for i, v := range topics {
+				if v.topic.String() == packet.Msg[0] {
+					v.cancel()
+					v.sub.Cancel()
+					err = v.topic.Close()
+
+					if err != nil {
+						log.Println(err)
+						WritePacket(conn, DeniedError, []string{err.Error()})
+						continue
+					}
+
+					topics = append(topics[:i], topics[i+1:]...)
+
+					log.Println("Success exits topic")
+					WritePacket(conn, Success, []string{"Success exits topic"})
+				}
+			}
+
+		case Publish:
+			for _, v := range topics {
+				if v.topic.String() == packet.Msg[0] {
+					err = v.topic.Publish(ctx, []byte(packet.Msg[1]))
+
+					if err != nil {
+						log.Println(err)
+						WritePacket(conn, DeniedError, []string{err.Error()})
+						continue
+					}
+
+					log.Println("Success publish topic")
+					WritePacket(conn, Success, []string{"Success publish topic"})
+				}
+			}
+		}
+	}
 }
 
 func CreateFlag() (string, string, int) {
@@ -202,6 +311,13 @@ type Packet struct {
 	TS      string
 	MsgCode int
 	Msg     []string
+}
+
+type Topic struct {
+	topic  *pubsub.Topic
+	sub    *pubsub.Subscription
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
