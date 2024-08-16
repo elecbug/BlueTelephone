@@ -27,6 +27,7 @@ import (
 )
 
 const NameExchangeProtocol = "/blue-telephone/name-exchange/1.0.0"
+const TlsProtocol = "/blue-telephone/tls/1.0.0"
 
 func main() {
 	group, name, port := CreateFlag()
@@ -49,8 +50,8 @@ func main() {
 		_, err := io.ReadFull(conn, buf)
 
 		if err != nil {
-			log.Println(err)
 			WritePacket(conn, DeniedError, []string{err.Error()})
+			log.Println(err)
 			continue
 		}
 
@@ -59,8 +60,8 @@ func main() {
 		err = json.Unmarshal([]byte(strings.TrimRight(string(buf), "\x00")), &packet)
 
 		if err != nil {
-			log.Println(err)
 			WritePacket(conn, DeniedError, []string{err.Error()})
+			log.Println(err)
 			continue
 		}
 
@@ -69,15 +70,15 @@ func main() {
 			topic, err := gossip.Join(packet.Msg[0])
 
 			if err != nil {
-				log.Println(err)
 				WritePacket(conn, DeniedError, []string{err.Error()})
+				log.Println(err)
 				continue
 			}
 			sub, err := topic.Subscribe()
 
 			if err != nil {
-				log.Println(err)
 				WritePacket(conn, DeniedError, []string{err.Error()})
+				log.Println(err)
 				continue
 			}
 
@@ -96,23 +97,23 @@ func main() {
 
 					if err != nil {
 						if err.Error() != "context canceled" {
-							log.Println(err)
 							WritePacket(conn, DeniedError, []string{err.Error()})
-						} else {
 							log.Println(err)
+						} else {
 							WritePacket(conn, Success, []string{err.Error()})
+							log.Println(err)
 
 							break
 						}
 					} else {
-						log.Println("got msg", string(msg.Data), "from", msg.ReceivedFrom.String(), "in topic", topic.String())
 						WritePacket(conn, GotGossip, []string{topic.String(), msg.ReceivedFrom.String(), string(msg.Data)})
+						log.Println("got msg", string(msg.Data), "from", msg.ReceivedFrom.String(), "in topic", topic.String())
 					}
 				}
 			}()
 
-			log.Println("Success joins topic")
 			WritePacket(conn, Success, []string{"Success joins topic"})
+			log.Println("Success joins topic")
 
 		case ExitGossip:
 			for i, v := range topics {
@@ -122,15 +123,15 @@ func main() {
 					err = v.topic.Close()
 
 					if err != nil {
-						log.Println(err)
 						WritePacket(conn, DeniedError, []string{err.Error()})
+						log.Println(err)
 						continue
 					}
 
 					topics = append(topics[:i], topics[i+1:]...)
 
-					log.Println("Success exits topic")
 					WritePacket(conn, Success, []string{"Success exits topic"})
+					log.Println("Success exits topic")
 				}
 			}
 
@@ -140,13 +141,13 @@ func main() {
 					err = v.topic.Publish(ctx, []byte(packet.Msg[1]))
 
 					if err != nil {
-						log.Println(err)
 						WritePacket(conn, DeniedError, []string{err.Error()})
+						log.Println(err)
 						continue
 					}
 
-					log.Println("Success publish topic")
 					WritePacket(conn, Success, []string{"Success publish topic"})
+					log.Println("Success publish topic")
 				}
 			}
 		}
@@ -167,13 +168,13 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 	host, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/0"),
 		libp2p.Security(noise.ID, noise.New),
-		libp2p.Muxer(yamux.ID, yamux.DefaultTransport),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Muxer(yamux.ID, yamux.DefaultTransport),
 	)
 
 	if err != nil {
-		log.Fatalln(err)
 		WritePacket(conn, PanicError, []string{err.Error()})
+		log.Fatalln(err)
 	} else {
 		addrs := make([]string, len(host.Addrs()))
 
@@ -181,15 +182,15 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 			addrs[i] = v.String()
 		}
 
-		log.Println("Self:", host.Addrs(), host.ID())
 		WritePacket(conn, CreateHost, append(addrs, host.ID().String()))
+		log.Println("Self:", host.Addrs(), host.ID())
 	}
 
 	ps, err := pubsub.NewGossipSub(ctx, host)
 
 	if err != nil {
-		log.Fatalln(err)
 		WritePacket(conn, PanicError, []string{err.Error()})
+		log.Fatalln(err)
 	}
 
 	peerChan := InitMDNS(host, rendezvous, conn)
@@ -209,42 +210,35 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 				string(buf),
 			})
 
-			log.Println("Add:", stream.Conn().RemoteMultiaddr().String(), stream.Conn().RemotePeer(), string(buf))
 			WritePacket(conn, FoundPeer, []string{stream.Conn().RemoteMultiaddr().String(), stream.Conn().RemotePeer().String(), string(buf)})
+			log.Println("Add:", stream.Conn().RemoteMultiaddr().String(), stream.Conn().RemotePeer(), string(buf))
 		})
 
 		for {
 			peer := <-peerChan
 
-			err = host.Connect(ctx, peer)
-
-			if err != nil {
-				log.Println(err)
-				WritePacket(conn, DeniedError, []string{err.Error()})
-				continue
-			}
-
+			host.Peerstore().AddAddrs(peer.ID, peer.Addrs, 1*time.Hour)
 			stream, err := host.NewStream(ctx, peer.ID, protocol.ID(NameExchangeProtocol))
 
 			if err != nil {
-				log.Println(err)
 				WritePacket(conn, DeniedError, []string{err.Error()})
+				log.Println(err)
 				continue
 			}
 
 			_, err = stream.Write([]byte(name))
 
 			if err != nil {
-				log.Println(err)
 				WritePacket(conn, DeniedError, []string{err.Error()})
+				log.Println(err)
 				continue
 			}
 
 			err = stream.Close()
 
 			if err != nil {
-				log.Println(err)
 				WritePacket(conn, DeniedError, []string{err.Error()})
+				log.Println(err)
 				continue
 			}
 		}
@@ -258,8 +252,8 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 				err := host.Connect(ctx, v.info)
 
 				if err != nil {
-					log.Println("Remove:", v.info.ID)
 					WritePacket(conn, RemovePeer, []string{v.info.ID.String()})
+					log.Println("Remove:", v.info.ID)
 
 					friends = append(friends[:i], friends[i+1:]...)
 
@@ -334,8 +328,8 @@ func InitMDNS(peerhost host.Host, rendezvous string, conn net.Conn) chan peer.Ad
 	err := ser.Start()
 
 	if err != nil {
-		log.Fatalln(err)
 		WritePacket(conn, PanicError, []string{err.Error()})
+		log.Fatalln(err)
 	}
 
 	return n.PeerChan
