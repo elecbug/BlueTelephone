@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -45,7 +46,7 @@ func main() {
 	for {
 		buf := make([]byte, 1024)
 
-		_, err := conn.Read(buf)
+		_, err := io.ReadFull(conn, buf)
 
 		if err != nil {
 			log.Println(err)

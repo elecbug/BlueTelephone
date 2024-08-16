@@ -293,9 +293,6 @@ namespace BlueTelephone
                 {
                     FileName = background,
                     Arguments = $"--group {GroupTextBox.Text} --name {NameTextBox.Text} --port {port}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
                     CreateNoWindow = true,
                 });
 
@@ -393,7 +390,10 @@ namespace BlueTelephone
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex) 
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             });
 
             t.Start();
