@@ -25,7 +25,7 @@ namespace BlueTelephone
         private List<string> Multiaddrs { get; set; } = new List<string>();
         private string PeerID { get; set; } = "";
 
-        private List<List<string>> Closers { get; set; } = new List<List<string>> { };
+        private List<List<string>> Closers { get; set; } = new List<List<string>>();
 
         public MainForm()
         {
@@ -117,6 +117,7 @@ namespace BlueTelephone
                 Dock = DockStyle.Fill,
                 FormattingEnabled = true,
             }, 0, 4);
+            panel.SetRowSpan(PeerListBox, 2);
 
             PeerListBox.Format += (s, e) =>
             {
@@ -187,6 +188,11 @@ namespace BlueTelephone
 
         private void GossipButtonClick(object? sender, EventArgs e)
         {
+            if (GossipTextBox!.Text == "")
+            {
+                return;
+            }
+
             foreach (TabPage page in GossipTabControl!.TabPages)
             {
                 if (page.Text == GossipTextBox!.Text)

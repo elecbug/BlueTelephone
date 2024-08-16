@@ -53,7 +53,7 @@ namespace BlueTelephone
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
-                Text = "Send",
+                Text = "↲",
             };
 
             panel.Controls.Add(button, 1, 1);
