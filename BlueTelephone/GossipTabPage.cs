@@ -88,7 +88,7 @@ namespace BlueTelephone
             byte[] data = Encoding.UTF8.GetBytes(json);
             byte[] buf = new byte[1024];
 
-            using (StreamWriter sw = new StreamWriter(".log", true))
+            using (StreamWriter sw = new StreamWriter("log", true))
             {
                 sw.WriteLine("W: " + json);
             }
