@@ -283,6 +283,11 @@ namespace BlueTelephone
                         byte[] data1 = Encoding.UTF8.GetBytes(json1);
                         byte[] buf1 = new byte[1024];
 
+                        using (StreamWriter sw = new StreamWriter(".log", true))
+                        {
+                            sw.WriteLine("W: " + json1);
+                        }
+
                         for (int i = 0; i < data1.Length; i++)
                         {
                             buf1[i] = data1[i];
@@ -311,6 +316,11 @@ namespace BlueTelephone
 
             byte[] data = Encoding.UTF8.GetBytes(json);
             byte[] buf = new byte[1024];
+
+            using (StreamWriter sw = new StreamWriter(".log", true))
+            {
+                sw.WriteLine("W: " + json);
+            }
 
             for (int i = 0; i < data.Length; i++)
             {
@@ -408,6 +418,12 @@ namespace BlueTelephone
                         Client.GetStream().Read(buffer, 0, 1024);
 
                         string json = Encoding.UTF8.GetString(buffer).TrimEnd('\0');
+
+                        using (StreamWriter sw = new StreamWriter(".log", true))
+                        {
+                            sw.WriteLine("R: " + json);
+                        }
+
                         Debug.WriteLine(json);
 
                         Packet? packet = JsonSerializer.Deserialize<Packet>(json);

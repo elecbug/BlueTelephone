@@ -115,7 +115,7 @@ jobs:
           path: version.txt
           retention-days: 1
 
-  release:
+  Release:
     needs: Archive 
     runs-on: windows-latest
 
@@ -124,17 +124,19 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: release-archive
+          path: archive
 
       - name: Download Version File
         uses: actions/download-artifact@v3
         with:
           name: version-file
+          path: version
 
       - name: Read Version
         id: read_version
         shell: pwsh
         run: |
-          $VERSION = Get-Content version.txt
+          $VERSION = Get-Content version\version.txt
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Checkout code
@@ -156,7 +158,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release.zip
+          asset_path: archive/release.zip
           asset_name: BlueTelephone-${{ env.VERSION }}.zip
           asset_content_type: application/zip
         if: steps.create_release.outputs.upload_url != ''
