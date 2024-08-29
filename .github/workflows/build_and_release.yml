@@ -80,8 +80,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ VERSION }}
-          release_name: Release ${{ VERSION }}
+          tag_name: $VERSION
+          release_name: Release $VERSION
           draft: false
           prerelease: false
 
@@ -90,5 +90,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release.zip
-          asset_name: BlueTelephone-${{ VERSION }}.zip
+          asset_name: BlueTelephone-$VERSION.zip
           asset_content_type: application/zip
