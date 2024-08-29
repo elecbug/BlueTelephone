@@ -32,7 +32,7 @@ jobs:
         with:
           name: csharp-build
           path: |
-            BlueTelephone\bin\Release\net8.0-windows\
+            BlueTelephone\bin\Release\net8.0-windows\*
 
   build_go:
     runs-on: windows-latest
@@ -75,17 +75,20 @@ jobs:
 
       - name: Prepare Release Folder
         run: |
+          cd ..
           mkdir publish
           copy BlueTelephone\bin\Release\net8.0-windows\* publish\
           copy background\blue-telephone-d.exe publish\blue-telephone-d.exe
 
       - name: Zip Release Files
         run: |
+          cd ..
           powershell Compress-Archive -Path publish\* -DestinationPath release.zip
       
       - name: Extract Version from Commit Message
         id: extract_version
         run: |
+          cd ..
           VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+')
           echo $VERSION > version.txt
 
@@ -93,14 +96,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: release-archive
-          path: release.zip
+          path: ..\release.zip
           retention-days: 1
 
       - name: Upload Version File
         uses: actions/upload-artifact@v3
         with:
           name: version-file
-          path: version.txt
+          path: ..\version.txt
           retention-days: 1
 
   release:
