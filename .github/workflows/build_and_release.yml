@@ -25,14 +25,16 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Test C# Project
-        run: dotnet test --no-build --verbosity normal
-
+        run: |
+          dotnet test --no-build --verbosity normal
+          mkdir cs
+          copy BlueTelephone\bin\Release\net8.0-windows\* cs
       - name: Upload C# Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: csharp-build
           path: |
-            BlueTelephone\bin\Release\net8.0-windows\*
+            cs
 
   build_go:
     runs-on: windows-latest
@@ -49,14 +51,14 @@ jobs:
       - name: Build Go Program
         run: |
           cd background  # Go 프로그램이 있는 디렉토리로 이동
-          go mod tidy
           go build -o blue-telephone-d.exe  # Go 프로그램 빌드
+          copy blue-telephone-d.exe ..
 
       - name: Upload Go Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: go-build
-          path: background\blue-telephone-d.exe
+          path: blue-telephone-d.exe
   
   Archive:
     runs-on: windows-latest
@@ -75,10 +77,9 @@ jobs:
 
       - name: Prepare Release Folder
         run: |
-          cd ..
           mkdir publish
-          copy BlueTelephone\bin\Release\net8.0-windows\* publish\
-          copy background\blue-telephone-d.exe publish\blue-telephone-d.exe
+          copy cs\* publish\
+          copy blue-telephone-d.exe publish\blue-telephone-d.exe
 
       - name: Zip Release Files
         run: |
