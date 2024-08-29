@@ -6,7 +6,7 @@ on:
       - master  # master 브랜치에 푸시할 때 트리거
 
 jobs:
-  build_csharp:
+  Build-CS:
     runs-on: windows-latest
     
     steps:
@@ -36,7 +36,7 @@ jobs:
           path: |
             cs\*
 
-  build_go:
+  Build-Go:
     runs-on: windows-latest
 
     steps:
@@ -62,7 +62,7 @@ jobs:
           
   Archive:
     runs-on: windows-latest
-    needs: [build_csharp, build_go]  # C#과 Go 빌드가 모두 완료된 후에 실행
+    needs: [Build-CS, Build-Go]  # C#과 Go 빌드가 모두 완료된 후에 실행
 
     steps:
       - name: Download C# Build Artifacts
@@ -98,7 +98,7 @@ jobs:
             echo $VERSION > version.txt
           } else {
             Write-Host "No version found in the commit message."
-            exit 1
+            exit 0
           }
 
       - name: Upload Release Archive
