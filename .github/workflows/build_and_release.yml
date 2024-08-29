@@ -105,11 +105,9 @@ jobs:
         id: extract_version
         shell: pwsh
         run: |
-          $VERSION = $($env:GITHUB_EVENT_HEAD_COMMIT_MESSAGE | Select-String -Pattern '^v[0-9]+\.[0-9]+\.[0-9]+' -AllMatches).Matches.Value
-          if (-not [string]::IsNullOrEmpty($VERSION)) {
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if ($env:GITHUB_EVENT_HEAD_COMMIT_MESSAGE -match '^new:') {
           } else {
-            Write-Host "No version found in the commit message."
+            Write-Host "No 'new:' prefix found in the commit message."
             exit 0
           }
 
@@ -128,17 +126,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.VERSION }}
-          release_name: Release ${{ env.VERSION }}
+          tag_name: NewVersion
+          release_name: Release
           draft: false
           prerelease: false
-        if: startsWith(env.VERSION, 'v') && env.VERSION != ''
 
       - name: Upload Combined Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: archive/release.zip
-          asset_name: BlueTelephone-${{ env.VERSION }}.zip
+          asset_name: BlueTelephone.zip
           asset_content_type: application/zip
         if: steps.create_release.outputs.upload_url != ''
