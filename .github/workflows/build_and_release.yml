@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: self-hosted
 
     outputs:
       VERSION: ${{ steps.get_version.outputs.VERSION }}
@@ -73,7 +73,7 @@ jobs:
   release:
     needs: build
     if: ${{ needs.build.outputs.VERSION_CHANGED == 'true' }}
-    runs-on: windows-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
