@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
 
     outputs:
-      VERSION: ${{ steps.get_version.outputs.VERSION }}
+      VERSION: ${{ steps.extract_version.outputs.VERSION }}
       VERSION_CHANGED: ${{ steps.version_check.outputs.VERSION_CHANGED }}
 
     steps:
@@ -51,11 +51,15 @@ jobs:
         run: |
           powershell Compress-Archive -Path publish\* -DestinationPath release.zip
 
-      - name: Read Version from version.txt
-        id: get_version
+      - name: Extract Version from Commit Message
+        id: extract_version
         run: |
-          VERSION=$(cat version.txt)
-          echo "Current version is $VERSION"
+          VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+')
+          if [ -z "$VERSION" ]; then
+            echo "No version found in commit message."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "::set-output name=VERSION::$VERSION"
 
       - name: Check if version.txt has changed
