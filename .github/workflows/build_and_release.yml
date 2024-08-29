@@ -49,6 +49,7 @@ jobs:
       - name: Build Go Program
         run: |
           cd background  # Go 프로그램이 있는 디렉토리로 이동
+          go tidy
           go build -o blue-telephone-d.exe  # Go 프로그램 빌드
 
       - name: Upload Go Build Artifacts
