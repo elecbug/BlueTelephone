@@ -80,7 +80,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ echo version.txt }}
+          tag_name: ${{ VERSION }}
           release_name: Release ${{ VERSION }}
           draft: false
           prerelease: false
