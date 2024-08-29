@@ -88,19 +88,6 @@ jobs:
         run: |
           powershell Compress-Archive -Path publish\* -DestinationPath release.zip
       
-      - name: Extract Version from Commit Message
-        id: extract_version
-        shell: pwsh
-        run: |
-          $VERSION = $($env:GITHUB_EVENT_HEAD_COMMIT_MESSAGE | Select-String -Pattern '^v[0-9]+\.[0-9]+\.[0-9]+' -AllMatches).Matches.Value
-          if (-not [string]::IsNullOrEmpty($VERSION)) {
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
-            echo $VERSION > version.txt
-          } else {
-            Write-Host "No version found in the commit message."
-            exit 0
-          }
-
       - name: Upload Release Archive
         uses: actions/upload-artifact@v3
         with:
@@ -108,36 +95,29 @@ jobs:
           path: release.zip
           retention-days: 1
 
-      - name: Upload Version File
-        uses: actions/upload-artifact@v3
-        with:
-          name: version-file
-          path: version.txt
-          retention-days: 1
-
   Release:
     needs: Archive 
     runs-on: windows-latest
 
     steps:
+    
+      - name: Extract Version from Commit Message
+        id: extract_version
+        shell: pwsh
+        run: |
+          $VERSION = $($env:GITHUB_EVENT_HEAD_COMMIT_MESSAGE | Select-String -Pattern '^v[0-9]+\.[0-9]+\.[0-9]+' -AllMatches).Matches.Value
+          if (-not [string]::IsNullOrEmpty($VERSION)) {
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          } else {
+            Write-Host "No version found in the commit message."
+            exit 0
+          }
+
       - name: Download Release Archive
         uses: actions/download-artifact@v3
         with:
           name: release-archive
           path: archive
-
-      - name: Download Version File
-        uses: actions/download-artifact@v3
-        with:
-          name: version-file
-          path: version
-
-      - name: Read Version
-        id: read_version
-        shell: pwsh
-        run: |
-          $VERSION = Get-Content version\version.txt
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Checkout code
         uses: actions/checkout@v2
