@@ -67,7 +67,7 @@ jobs:
 
   release:
     needs: build
-    if: ${{ env.VERSION_CHANGED == 'true' }}
+    if: ${{ VERSION_CHANGED == 'true' }}
     runs-on: windows-latest
 
     steps:
