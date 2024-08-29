@@ -44,9 +44,9 @@ jobs:
       - name: Prepare Release Folder
         run: |
           mkdir publish
-          copy BlueTelephone.exe publish/BlueTelephone.exe
-          copy background\blue-telephone-d.exe publish/blue-telephone-d.exe
-
+          copy bin\Release\net8.0-windows\* publish\*
+          copy background\blue-telephone-d.exe publish\blue-telephone-d.exe
+      
       - name: Zip Release Files
         run: |
           powershell Compress-Archive -Path publish\* -DestinationPath release.zip
