@@ -27,6 +27,13 @@ jobs:
       - name: Test C# Project
         run: dotnet test --no-build --verbosity normal
 
+      - name: Upload C# Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: csharp-build
+          path: |
+            BlueTelephone\bin\Release\net8.0-windows\
+
   build_go:
     runs-on: windows-latest
 
@@ -43,12 +50,28 @@ jobs:
         run: |
           cd background  # Go 프로그램이 있는 디렉토리로 이동
           go build -o blue-telephone-d.exe  # Go 프로그램 빌드
+
+      - name: Upload Go Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-build
+          path: background\blue-telephone-d.exe
   
   Archive:
     runs-on: windows-latest
     needs: [build_csharp, build_go]  # C#과 Go 빌드가 모두 완료된 후에 실행
 
     steps:
+      - name: Download C# Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: csharp-build
+
+      - name: Download Go Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: go-build
+
       - name: Prepare Release Folder
         run: |
           mkdir publish
@@ -64,13 +87,42 @@ jobs:
         run: |
           VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+')
           echo $VERSION > version.txt
+
+      - name: Upload Release Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-archive
+          path: release.zip
+          retention-days: 1
+
+      - name: Upload Version File
+        uses: actions/upload-artifact@v3
+        with:
+          name: version-file
+          path: version.txt
+          retention-days: 1
+
   release:
     needs: Archive 
     runs-on: windows-latest
 
     steps:
-      - run: |
+      - name: Download Release Archive
+        uses: actions/download-artifact@v3
+        with:
+          name: release-archive
+
+      - name: Download Version File
+        uses: actions/download-artifact@v3
+        with:
+          name: version-file
+
+      - name: Read Version
+        id: read_version
+        run: |
           VERSION=$(cat version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -80,8 +132,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: $VERSION
-          release_name: Release $VERSION
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
 
@@ -90,5 +142,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release.zip
-          asset_name: BlueTelephone-$VERSION.zip
+          asset_name: BlueTelephone-${{ env.VERSION }}.zip
           asset_content_type: application/zip
