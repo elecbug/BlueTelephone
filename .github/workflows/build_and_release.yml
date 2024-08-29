@@ -96,7 +96,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: NewVersion
+          tag_name: v1.0.1
           release_name: BlueTelephone-v1.0.1
           draft: false
           prerelease: false
