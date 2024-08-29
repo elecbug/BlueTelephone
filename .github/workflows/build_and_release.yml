@@ -69,6 +69,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - run: |
+          VERSION=$(cat version.txt)
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -79,7 +81,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ echo version.txt }}
-          release_name: Release ${{ echo version.txt }}
+          release_name: Release ${{ VERSION }}
           draft: false
           prerelease: false
 
@@ -88,5 +90,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release.zip
-          asset_name: BlueTelephone-${{ echo version.txt }}.zip
+          asset_name: BlueTelephone-${{ VERSION }}.zip
           asset_content_type: application/zip
