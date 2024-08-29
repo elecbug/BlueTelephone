@@ -1,0 +1,95 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master  # master 브랜치에 푸시할 때 트리거
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '8.x'  # 사용하는 .NET Core 버전
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build C# Project
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test C# Project
+        run: dotnet test --no-build --verbosity normal
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'  # 사용하는 Go 버전
+
+      - name: Build Go Program
+        run: |
+          cd background  # Go 프로그램이 있는 디렉토리로 이동
+          go build -o blue-telephone-d.exe  # Go 프로그램 빌드
+
+      - name: Prepare Release Folder
+        run: |
+          mkdir publish
+          copy BlueTelephone.exe publish/BlueTelephone.exe
+          copy background\blue-telephone-d.exe publish/blue-telephone-d.exe
+
+      - name: Zip Release Files
+        run: |
+          powershell Compress-Archive -Path publish\* -DestinationPath release.zip
+
+      - name: Read Version from version.txt
+        id: get_version
+        run: |
+          VERSION=$(cat version.txt)
+          echo "Current version is $VERSION"
+          echo ::set-output name=VERSION::$VERSION
+
+      - name: Check if version.txt has changed
+        id: version_check
+        run: |
+          git fetch origin master
+          if git diff --name-only HEAD^ HEAD | grep -q "version.txt"; then
+            echo "version.txt has changed"
+            echo ::set-output name=VERSION_CHANGED::true
+          else
+            echo "version.txt has not changed"
+            echo ::set-output name=VERSION_CHANGED::false
+          fi
+
+  release:
+    needs: build
+    if: ${{ steps.version_check.outputs.VERSION_CHANGED == 'true' }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Combined Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release.zip
+          asset_name: BlueTelephone_Release_${{ steps.get_version.outputs.VERSION }}.zip
+          asset_content_type: application/zip
