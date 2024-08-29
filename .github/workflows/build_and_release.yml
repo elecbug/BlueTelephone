@@ -98,9 +98,10 @@ jobs:
   Release:
     needs: Archive 
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
-    
       - name: Extract Version from Commit Message
         id: extract_version
         shell: pwsh
