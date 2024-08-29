@@ -78,6 +78,7 @@ jobs:
       - name: Prepare Release Folder
         run: |
           mkdir publish
+          tree
           copy cs\* publish\
           copy blue-telephone-d.exe publish\blue-telephone-d.exe
 
