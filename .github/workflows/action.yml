@@ -67,19 +67,41 @@ jobs:
     needs: [Build-CS, Build-Go]  # C#과 Go 빌드가 모두 완료된 후에 실행
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get the latest commit message
+        id: get_commit_message
+        run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_ENV
+
+      - name: Set Release Tag and Name
+        id: set_release_info
+        run: |
+          if [[ "${{ env.COMMIT_MESSAGE }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "RELEASE_TAG=$(echo ${{ env.COMMIT_MESSAGE }} | grep -o '^v[0-9]\+\.[0-9]\+\.[0-9]\+')" >> $GITHUB_ENV
+            echo "RELEASE_NAME=BlueTelephone-${{ env.RELEASE_TAG }}" >> $GITHUB_ENV
+          fi
+
+      - name: Stop if commit message doesn't contain version
+        if: env.RELEASE_TAG == ''
+        run: echo "No version tag found in commit message. Skipping release."
+
       - name: Download C# Build Artifacts
+        if: env.RELEASE_TAG != ''
         uses: actions/download-artifact@v3
         with:
           name: csharp-build
           path: cs
 
       - name: Download Go Build Artifacts
+        if: env.RELEASE_TAG != ''
         uses: actions/download-artifact@v3
         with:
           name: go-build
           path: go
 
       - name: Prepare Release Folder
+        if: env.RELEASE_TAG != ''
         run: |
           mkdir publish
           ls -l
@@ -87,24 +109,27 @@ jobs:
           cp go/* publish/
 
       - name: Install zip utility
+        if: env.RELEASE_TAG != ''
         run: sudo apt-get install -y zip
         
       - name: Zip Release Files
-        run: |
-          zip -r release.zip publish/*
+        if: env.RELEASE_TAG != ''
+        run: zip -r release.zip publish/*
 
       - name: Create Release
+        if: env.RELEASE_TAG != ''
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v1.0.1
-          release_name: BlueTelephone-v1.0.1
+          tag_name: ${{ env.RELEASE_TAG }}
+          release_name: ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: false
 
       - name: Upload Combined Release Asset
+        if: env.RELEASE_TAG != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -91,30 +91,38 @@ namespace BlueTelephone
                 Client?.Close();
                 Process?.Kill();
             };
-
-            /// 메인 컨트롤들이 들어가는 패널 정의
-            TableLayoutPanel panel = new TableLayoutPanel()
+            
+            /// 전체 메인 패널 정의
+            SplitContainer container = new SplitContainer() 
             {
                 Parent = this,
                 Visible = true,
                 Dock = DockStyle.Fill,
             };
 
-            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
-            panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+            /// 메인 컨트롤들이 들어가는 패널 정의
+            TableLayoutPanel panel2 = new TableLayoutPanel()
+            {
+                Parent = container.Panel2,
+                Visible = true,
+                Dock = DockStyle.Fill,
+            };
 
-            panel.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
-            panel.ColumnStyles.Add(new ColumnStyle() { Width = 6, SizeType = SizeType.Percent });
-            panel.ColumnStyles.Add(new ColumnStyle() { Width = 100, SizeType = SizeType.Absolute });
+            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+            panel2.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
+            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+            panel2.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
+            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+
+            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
+            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 6, SizeType = SizeType.Percent });
+            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 100, SizeType = SizeType.Absolute });
 
             /// 아래는 패널에 컨트롤들 추가
             /// 필드로 선언할 필요 없는 컨트롤은 즉시 추가
 
-            panel.Controls.Add(new Label()
+            panel2.Controls.Add(new Label()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
@@ -122,7 +130,7 @@ namespace BlueTelephone
                 TextAlign = ContentAlignment.MiddleRight,
             }, 0, 0);
 
-            panel.Controls.Add(new Label()
+            panel2.Controls.Add(new Label()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
@@ -130,7 +138,7 @@ namespace BlueTelephone
                 TextAlign = ContentAlignment.MiddleRight,
             }, 0, 1);
 
-            panel.Controls.Add(new Label()
+            panel2.Controls.Add(new Label()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
@@ -138,72 +146,72 @@ namespace BlueTelephone
                 TextAlign = ContentAlignment.MiddleRight,
             }, 0, 2);
 
-            panel.Controls.Add(new Label()
-            {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Closers",
-                TextAlign = ContentAlignment.MiddleCenter,
-            }, 0, 3);
+            //panel.Controls.Add(new Label()
+            //{
+            //    Visible = true,
+            //    Dock = DockStyle.Fill,
+            //    Text = "Closers",
+            //    TextAlign = ContentAlignment.MiddleCenter,
+            //}, 0, 3);
 
-            panel.Controls.Add(GroupTextBox = new TextBox()
+            panel2.Controls.Add(GroupTextBox = new TextBox()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
             }, 1, 0);
 
-            panel.Controls.Add(NameTextBox = new TextBox()
+            panel2.Controls.Add(NameTextBox = new TextBox()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
             }, 1, 1);
 
-            panel.Controls.Add(InfoTextBox = new RichTextBox()
+            panel2.Controls.Add(InfoTextBox = new RichTextBox()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
             }, 1, 2);
 
-            panel.SetColumnSpan(InfoTextBox, 2);
+            panel2.SetColumnSpan(InfoTextBox, 2);
 
-            panel.Controls.Add(PeerListBox = new ListBox()
-            {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                FormattingEnabled = true,
-            }, 0, 4);
-            panel.SetRowSpan(PeerListBox, 2);
+            //panel.Controls.Add(PeerListBox = new ListBox()
+            //{
+            //    Visible = true,
+            //    Dock = DockStyle.Fill,
+            //    FormattingEnabled = true,
+            //}, 0, 4);
+            //panel.SetRowSpan(PeerListBox, 2);
 
-            /// 피어 리스트 포맷 재정의
-            /// [PEER_NAME] ([PEER_ID 15자리]...)으로 나옴
-            PeerListBox.Format += (s, e) =>
-            {
-                List<string> strs = (e.ListItem as List<string>)!;
-                e.Value = strs.Last() + " (" + strs[1][0..15] + "...)";
-            };
+            ///// 피어 리스트 포맷 재정의
+            ///// [PEER_NAME] ([PEER_ID 15자리]...)으로 나옴
+            //PeerListBox.Format += (s, e) =>
+            //{
+            //    List<string> strs = (e.ListItem as List<string>)!;
+            //    e.Value = strs.Last() + " (" + strs[1][0..15] + "...)";
+            //};
 
-            panel.Controls.Add(ConnectButton = new Button()
+            panel2.Controls.Add(ConnectButton = new Button()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
                 Text = "Connect",
             }, 2, 0);
 
-            panel.SetRowSpan(ConnectButton, 2);
+            panel2.SetRowSpan(ConnectButton, 2);
 
             ConnectButton.Click += ConnectButtonClick;
 
-            panel.Controls.Add(GossipTabControl = new TabControl()
+            panel2.Controls.Add(GossipTabControl = new TabControl()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
             }, 1, 3);
 
-            panel.SetRowSpan(GossipTabControl, 2);
-            panel.SetColumnSpan(GossipTabControl, 2);
+            panel2.SetRowSpan(GossipTabControl, 2);
+            panel2.SetColumnSpan(GossipTabControl, 2);
 
-            panel.Controls.Add(GossipTextBox = new TextBox()
+            panel2.Controls.Add(GossipTextBox = new TextBox()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
@@ -212,7 +220,7 @@ namespace BlueTelephone
 
             GossipTextBox.TextChanged += GossipTextBoxTextChanged;
 
-            panel.Controls.Add(GossipButton = new Button()
+            panel2.Controls.Add(GossipButton = new Button()
             {
                 Visible = true,
                 Dock = DockStyle.Fill,
