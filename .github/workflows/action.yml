@@ -30,7 +30,7 @@ jobs:
           mkdir cs
           copy BlueTelephone\bin\Release\net8.0-windows\* cs
       - name: Upload C# Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: csharp-build
           path: |
@@ -55,7 +55,7 @@ jobs:
           copy blue-telephone-d.exe ..
 
       - name: Upload Go Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: go-build
           path: blue-telephone-d.exe
