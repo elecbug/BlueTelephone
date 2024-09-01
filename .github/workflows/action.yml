@@ -60,7 +60,7 @@ jobs:
           name: go-build
           path: blue-telephone-d.exe
           
-  Archive:
+  Release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
