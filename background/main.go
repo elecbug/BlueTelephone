@@ -51,7 +51,7 @@ func main() {
 	topics := []Topic{}
 
 	// Gossip 형성
-	_, gossip := CreateHostAndExchangeInfo(ctx, group, name, friends, conn)
+	host, gossip := CreateHostAndExchangeInfo(ctx, group, name, friends, conn)
 
 	// 무한 대기하며 폼과 통신
 	for {
@@ -61,7 +61,7 @@ func main() {
 
 		// 메시지 못읽겠으면 오류 전달
 		if err != nil {
-			WritePacket(conn, DeniedError, []string{err.Error()})
+			WritePacket(conn, GoodError, []string{err.Error()})
 			log.Println(err)
 			continue
 		}
@@ -72,7 +72,7 @@ func main() {
 
 		// 받은 패킷이 json으로 안풀리면 오류 전달
 		if err != nil {
-			WritePacket(conn, DeniedError, []string{err.Error()})
+			WritePacket(conn, GoodError, []string{err.Error()})
 			log.Println(err)
 			continue
 		}
@@ -84,14 +84,14 @@ func main() {
 			topic, err := gossip.Join(packet.Msg[0])
 
 			if err != nil {
-				WritePacket(conn, DeniedError, []string{err.Error()})
+				WritePacket(conn, GoodError, []string{err.Error()})
 				log.Println(err)
 				continue
 			}
 			sub, err := topic.Subscribe()
 
 			if err != nil {
-				WritePacket(conn, DeniedError, []string{err.Error()})
+				WritePacket(conn, GoodError, []string{err.Error()})
 				log.Println(err)
 				continue
 			}
@@ -118,7 +118,7 @@ func main() {
 					// 이긴 한데, 그 오류가 context canceled 즉, 토픽 구독 취소라면 Success 코드로 전송
 					if err != nil {
 						if err.Error() != "context canceled" {
-							WritePacket(conn, DeniedError, []string{err.Error()})
+							WritePacket(conn, GoodError, []string{err.Error()})
 							log.Println(err)
 						} else {
 							WritePacket(conn, Success, []string{err.Error()})
@@ -149,7 +149,7 @@ func main() {
 					// 이탈 실패시 발생
 					// 아직까지 발생한적 없음
 					if err != nil {
-						WritePacket(conn, DeniedError, []string{err.Error()})
+						WritePacket(conn, GoodError, []string{err.Error()})
 						log.Println(err)
 						continue
 					}
@@ -177,7 +177,7 @@ func main() {
 					// 실패 알림
 					// 이것도 발생한 적 없음
 					if err != nil {
-						WritePacket(conn, DeniedError, []string{err.Error()})
+						WritePacket(conn, GoodError, []string{err.Error()})
 						log.Println(err)
 						continue
 					}
@@ -189,6 +189,28 @@ func main() {
 					break
 				}
 			}
+
+		// 직접 피어 추가 요청시
+		case PlzFindPeer:
+			info, err := peer.AddrInfoFromString(packet.Msg[0])
+
+			// 실패 알림
+			if err != nil {
+				WritePacket(conn, GoodError, []string{err.Error()})
+				log.Println(err)
+				continue
+			}
+
+			for _, v := range info.Addrs {
+				host.Peerstore().AddAddr(info.ID, v, time.Hour)
+			}
+
+			// 성공했다고 전달
+
+			msg := fmt.Sprintf("Success add peer (%s)", info.ID)
+
+			WritePacket(conn, Success, []string{msg})
+			log.Println(msg)
 		}
 	}
 }
@@ -274,7 +296,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 			stream, err := host.NewStream(ctx, peer.ID, protocol.ID(NameExchangeProtocol))
 
 			if err != nil {
-				WritePacket(conn, DeniedError, []string{err.Error()})
+				WritePacket(conn, GoodError, []string{err.Error()})
 				log.Println(err)
 				continue
 			}
@@ -282,7 +304,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 			_, err = stream.Write([]byte(name))
 
 			if err != nil {
-				WritePacket(conn, DeniedError, []string{err.Error()})
+				WritePacket(conn, GoodError, []string{err.Error()})
 				log.Println(err)
 				continue
 			}
@@ -290,7 +312,7 @@ func CreateHostAndExchangeInfo(ctx context.Context, rendezvous string, name stri
 			err = stream.Close()
 
 			if err != nil {
-				WritePacket(conn, DeniedError, []string{err.Error()})
+				WritePacket(conn, GoodError, []string{err.Error()})
 				log.Println(err)
 				continue
 			}

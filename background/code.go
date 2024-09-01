@@ -4,7 +4,7 @@ const (
 	// 이건 못살리는 에러(송)
 	PanicError = -1
 	// 살릴만한 에러(송)
-	DeniedError = 0
+	GoodError = 0
 	// 백그라운드로 전달한 명령 성공(송)
 	Success = 1
 	// 호스트가 생성되었음(송)
@@ -21,4 +21,6 @@ const (
 	Publish = 7
 	// 메시지가 왔음(송)
 	GotGossip = 8
+	/// 피어를 찾아주셈(송)
+	PlzFindPeer = 9
 )

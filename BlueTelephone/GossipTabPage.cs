@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using BlueTelephone.Background;
 
 namespace BlueTelephone
 {
@@ -90,7 +91,7 @@ namespace BlueTelephone
 
             using (StreamWriter sw = new StreamWriter("log", true))
             {
-                sw.WriteLine("W: " + json);
+                sw.WriteLine("F: " + json);
             }
 
             for (int i = 0; i < data.Length; i++)

@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using BlueTelephone.Background;
 
 namespace BlueTelephone
 {
@@ -41,6 +42,14 @@ namespace BlueTelephone
         /// 채팅방에 참여/이탈하는 Gossip 관련 버튼
         /// </summary>
         private Button? GossipButton { get; set; }
+        /// <summary>
+        /// 직접 Multiaddr 기반 피어 검색을 수행하는 텍스트 박스
+        /// </summary>
+        private TextBox? PeerFoundTextBox { get; set; }
+        /// <summary>
+        /// 직접 피어 검색을 위한 버튼
+        /// </summary>
+        private Button? PeerFoundButton { get; set; }
 
         /// <summary>
         /// 백그라운드 Go 프로세스와 연결되는 (blue-telephone-d.exe) TCP 리스너
@@ -91,144 +100,318 @@ namespace BlueTelephone
                 Client?.Close();
                 Process?.Kill();
             };
-            
+
             /// 전체 메인 패널 정의
-            SplitContainer container = new SplitContainer() 
+            TabControl container = new TabControl()
             {
                 Parent = this,
                 Visible = true,
                 Dock = DockStyle.Fill,
             };
-
-            /// 메인 컨트롤들이 들어가는 패널 정의
-            TableLayoutPanel panel2 = new TableLayoutPanel()
+            
             {
-                Parent = container.Panel2,
-                Visible = true,
-                Dock = DockStyle.Fill,
-            };
+                TabPage page = new TabPage()
+                {
+                    Text = "Login",
+                };
 
-            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel2.RowStyles.Add(new RowStyle() { Height = 50, SizeType = SizeType.Absolute });
-            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
-            panel2.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
-            panel2.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                container.TabPages.Add(page);
 
-            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
-            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 6, SizeType = SizeType.Percent });
-            panel2.ColumnStyles.Add(new ColumnStyle() { Width = 100, SizeType = SizeType.Absolute });
+                /// 로그인 컨트롤들이 들어가는 패널 정의
+                TableLayoutPanel panel = new TableLayoutPanel()
+                {
+                    Parent = page,
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                };
 
-            /// 아래는 패널에 컨트롤들 추가
-            /// 필드로 선언할 필요 없는 컨트롤은 즉시 추가
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                panel.RowStyles.Add(new RowStyle() { Height = 70, SizeType = SizeType.Absolute });
 
-            panel2.Controls.Add(new Label()
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 50, SizeType = SizeType.Absolute });
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 80, SizeType = SizeType.Absolute });
+
+                /// 아래는 패널에 컨트롤들 추가
+                /// 필드로 선언할 필요 없는 컨트롤은 즉시 추가
+
+                Label mainLabel = new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Login",
+                    TextAlign = ContentAlignment.MiddleCenter,
+                };
+
+                panel.Controls.Add(mainLabel, 0, 0);
+
+                panel.SetColumnSpan(mainLabel, 3);
+
+                panel.Controls.Add(new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Group",
+                    TextAlign = ContentAlignment.MiddleRight,
+                }, 0, 1);
+
+                panel.Controls.Add(new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Name",
+                    TextAlign = ContentAlignment.MiddleRight,
+                }, 0, 2);
+
+                panel.Controls.Add(new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Info",
+                    TextAlign = ContentAlignment.MiddleRight,
+                }, 0, 3);
+
+                panel.Controls.Add(GroupTextBox = new TextBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                }, 1, 1);
+
+                panel.Controls.Add(NameTextBox = new TextBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                }, 1, 2);
+
+                panel.Controls.Add(InfoTextBox = new RichTextBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    WordWrap = false,
+                }, 1, 3);
+
+                panel.SetColumnSpan(InfoTextBox, 2);
+
+                panel.Controls.Add(ConnectButton = new Button()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Connect",
+                }, 2, 1);
+
+                panel.SetRowSpan(ConnectButton, 2);
+
+                ConnectButton.Click += ConnectButtonClick;
+            }
+
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Group",
-                TextAlign = ContentAlignment.MiddleRight,
-            }, 0, 0);
+                TabPage page = new TabPage() 
+                {
+                    Text = "Peers",
+                };
 
-            panel2.Controls.Add(new Label()
+                container.TabPages.Add(page);
+
+                /// 친구창 컨트롤들이 들어가는 패널 정의
+                TableLayoutPanel panel = new TableLayoutPanel()
+                {
+                    Parent = page,
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                };
+
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                panel.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 1, SizeType = SizeType.Percent });
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 70, SizeType = SizeType.Absolute });
+
+                Label peerLabel = new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Found Peers",
+                    TextAlign = ContentAlignment.MiddleCenter,
+                };
+
+                panel.Controls.Add(peerLabel, 0, 0);
+                panel.SetColumnSpan(peerLabel, 2);
+
+                panel.Controls.Add(PeerListBox = new ListBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    FormattingEnabled = true,
+                }, 0, 1);
+
+                panel.SetColumnSpan(PeerListBox, 2);
+
+                /// 피어 리스트 포맷 재정의
+                /// [PEER_NAME] ([PEER_ID 15자리]...)으로 나옴
+                PeerListBox.Format += (s, e) =>
+                {
+                    List<string> strs = (e.ListItem as List<string>)!;
+                    e.Value = strs.Last() + " (" + strs[1][0..15] + "...)";
+                };
+
+                panel.Controls.Add(PeerFoundTextBox = new TextBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Enabled = false,
+                }, 0, 2);
+
+
+                panel.Controls.Add(PeerFoundButton = new Button()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Enabled = false,
+                    Text = "Dial"
+                }, 1, 2);
+
+                PeerFoundTextBox.KeyPress += PeerFoundTextBoxKeyPress;
+                PeerFoundButton.Click += PeerFoundButtonClick;
+            }
+
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Name",
-                TextAlign = ContentAlignment.MiddleRight,
-            }, 0, 1);
+                TabPage page = new TabPage()
+                {
+                    Text = "Chatting",
+                };
 
-            panel2.Controls.Add(new Label()
+                container.TabPages.Add(page);
+
+                /// 메인 컨트롤들이 들어가는 패널 정의
+                TableLayoutPanel panel = new TableLayoutPanel()
+                {
+                    Parent = page,
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                };
+
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+                panel.RowStyles.Add(new RowStyle() { Height = 1, SizeType = SizeType.Percent });
+                panel.RowStyles.Add(new RowStyle() { Height = 30, SizeType = SizeType.Absolute });
+
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 50, SizeType = SizeType.Absolute });
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 6, SizeType = SizeType.Percent });
+                panel.ColumnStyles.Add(new ColumnStyle() { Width = 100, SizeType = SizeType.Absolute });
+
+                Label mainLabel = new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Chatting",
+                    TextAlign = ContentAlignment.MiddleCenter,
+                };
+
+                panel.Controls.Add(mainLabel, 0, 0);
+
+                panel.SetColumnSpan(mainLabel, 3);
+
+                panel.Controls.Add(GossipTabControl = new TabControl()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                }, 0, 1);
+
+                panel.SetColumnSpan(GossipTabControl, 3);
+
+                panel.Controls.Add(new Label()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Room",
+                    TextAlign = ContentAlignment.MiddleCenter,
+                }, 0, 2);
+
+                panel.Controls.Add(GossipTextBox = new TextBox()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Enabled = false,
+                }, 1, 2);
+
+                GossipTextBox.TextChanged += GossipTextBoxTextChanged;
+                GossipTextBox.KeyPress += GossipTextBoxKeyPress;
+
+                panel.Controls.Add(GossipButton = new Button()
+                {
+                    Visible = true,
+                    Dock = DockStyle.Fill,
+                    Text = "Join/Exit",
+                    Enabled = false,
+                }, 2, 2);
+
+                GossipButton.Click += GossipButtonClick;
+            }
+        }
+
+        /// <summary>
+        /// 채팅방 참여에서 엔터 입력시 버튼 클릭과 동일한 효과
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void GossipTextBoxKeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == '\r')
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Info",
-                TextAlign = ContentAlignment.MiddleRight,
-            }, 0, 2);
+                GossipButtonClick(sender, e);
+                e.Handled = true;
+            }
+        }
 
-            //panel.Controls.Add(new Label()
-            //{
-            //    Visible = true,
-            //    Dock = DockStyle.Fill,
-            //    Text = "Closers",
-            //    TextAlign = ContentAlignment.MiddleCenter,
-            //}, 0, 3);
-
-            panel2.Controls.Add(GroupTextBox = new TextBox()
+        /// <summary>
+        /// 직접 피어로 커넥션 명령을 전송
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PeerFoundButtonClick(object? sender, EventArgs e)
+        {
+            /// 백그라운드로 명령을 전달하고
+            string json = JsonSerializer.Serialize(new Packet()
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-            }, 1, 0);
+                TS = DateTime.Now.ToString(),
+                MsgCode = (int)MsgCode.PlzFindPeer,
+                Msg = new List<string> { PeerFoundTextBox!.Text },
+            });
 
-            panel2.Controls.Add(NameTextBox = new TextBox()
+            byte[] data = Encoding.UTF8.GetBytes(json);
+            byte[] buf = new byte[1024];
+
+            using (StreamWriter sw = new StreamWriter("log", true))
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-            }, 1, 1);
+                sw.WriteLine("F: " + json);
+            }
 
-            panel2.Controls.Add(InfoTextBox = new RichTextBox()
+            for (int i = 0; i < data.Length; i++)
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-            }, 1, 2);
+                buf[i] = data[i];
+            }
 
-            panel2.SetColumnSpan(InfoTextBox, 2);
+            Client!.GetStream().Write(buf);
 
-            //panel.Controls.Add(PeerListBox = new ListBox()
-            //{
-            //    Visible = true,
-            //    Dock = DockStyle.Fill,
-            //    FormattingEnabled = true,
-            //}, 0, 4);
-            //panel.SetRowSpan(PeerListBox, 2);
+            /// 텍스트 박스를 비우고 페이지를 제거
+            PeerFoundTextBox!.Text = "";
+        }
 
-            ///// 피어 리스트 포맷 재정의
-            ///// [PEER_NAME] ([PEER_ID 15자리]...)으로 나옴
-            //PeerListBox.Format += (s, e) =>
-            //{
-            //    List<string> strs = (e.ListItem as List<string>)!;
-            //    e.Value = strs.Last() + " (" + strs[1][0..15] + "...)";
-            //};
-
-            panel2.Controls.Add(ConnectButton = new Button()
+        /// <summary>
+        /// 피어 찾기 박스에서 엔터 입력시 버튼 클릭과 동일한 효과
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PeerFoundTextBoxKeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == '\r')
             {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Connect",
-            }, 2, 0);
-
-            panel2.SetRowSpan(ConnectButton, 2);
-
-            ConnectButton.Click += ConnectButtonClick;
-
-            panel2.Controls.Add(GossipTabControl = new TabControl()
-            {
-                Visible = true,
-                Dock = DockStyle.Fill,
-            }, 1, 3);
-
-            panel2.SetRowSpan(GossipTabControl, 2);
-            panel2.SetColumnSpan(GossipTabControl, 2);
-
-            panel2.Controls.Add(GossipTextBox = new TextBox()
-            {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Enabled = false,
-            }, 1, 5);
-
-            GossipTextBox.TextChanged += GossipTextBoxTextChanged;
-
-            panel2.Controls.Add(GossipButton = new Button()
-            {
-                Visible = true,
-                Dock = DockStyle.Fill,
-                Text = "Join/Exit",
-                Enabled = false,
-            }, 2, 5);
-
-            GossipButton.Click += GossipButtonClick;
+                PeerFoundButtonClick(sender, e);
+                e.Handled = true;
+            }
         }
 
         /// <summary>
@@ -293,7 +476,7 @@ namespace BlueTelephone
 
                         using (StreamWriter sw = new StreamWriter("log", true))
                         {
-                            sw.WriteLine("W: " + json1);
+                            sw.WriteLine("F: " + json1);
                         }
 
                         for (int i = 0; i < data1.Length; i++)
@@ -327,7 +510,7 @@ namespace BlueTelephone
 
             using (StreamWriter sw = new StreamWriter("log", true))
             {
-                sw.WriteLine("W: " + json);
+                sw.WriteLine("F: " + json);
             }
 
             for (int i = 0; i < data.Length; i++)
@@ -337,13 +520,16 @@ namespace BlueTelephone
 
             Client!.GetStream().Write(buf);
 
-            /// 채팅 페이지도 추가
-            GossipTabControl!.TabPages.Add(new GossipTabPage(Client, GossipTextBox!.Text)
+            GossipTabPage gossipTabPage = new GossipTabPage(Client, GossipTextBox!.Text)
             {
                 Text = GossipTextBox!.Text,
-            });
+            };
 
+            /// 채팅 페이지도 추가
+            GossipTabControl!.TabPages.Add(gossipTabPage);
             GossipTabControl!.SelectTab(GossipTabControl!.TabPages.Count - 1);
+
+            gossipTabPage.Input.Focus();
 
             /// 역시 텍스트 박스는 비움
             GossipTextBox!.Text = "";
@@ -374,6 +560,8 @@ namespace BlueTelephone
             /// 채팅 관련 컨트롤들을 해방
             GossipTextBox!.Enabled = true;
             GossipButton!.Enabled = true;
+            PeerFoundTextBox!.Enabled = true;
+            PeerFoundButton!.Enabled = true;
 
             /// 포트 설정하고 루프백 리스너 설정
             int port = new Random().Next(3000, 1 << 16);
@@ -429,7 +617,7 @@ namespace BlueTelephone
 
                         using (StreamWriter sw = new StreamWriter("log", true))
                         {
-                            sw.WriteLine("R: " + json);
+                            sw.WriteLine("B: " + json);
                         }
 
                         Debug.WriteLine(json);
@@ -455,7 +643,7 @@ namespace BlueTelephone
 
                             /// 살릴만한 에러면 경고만 표시
                             /// 백그라운드는 사망하지 않음
-                            case MsgCode.DeniedError:
+                            case MsgCode.GoodError:
                                 /// 예외적으로 TCP가 끊어질 때 발생하는 EOF 에러의 경우
                                 /// 즉, 프로그램이 꺼질 때 한번 발생하는 에러는 경고음만 발생시키므로 그냥 함수 종료
                                 if (packet.Msg[0] == "EOF")
@@ -557,74 +745,5 @@ namespace BlueTelephone
 
             t.Start();
         }
-    }
-
-    /// <summary>
-    /// 패킷 형태
-    /// </summary>
-    public class Packet
-    {
-        /// <summary>
-        /// 타임스탬프,
-        /// 활용 방안은 미정
-        /// </summary>
-        public required string TS { get; set; }
-        /// <summary>
-        /// 메시지 코드,
-        /// 백그라운드와 공유
-        /// </summary>
-        public required int MsgCode { get; set; }
-        /// <summary>
-        /// 메시지,
-        /// 문자열의 리스트로 이루어짐
-        /// </summary>
-        public required List<string> Msg { get; set; }
-    }
-
-    /// <summary>
-    /// 메시지 코드
-    /// </summary>
-    public enum MsgCode
-    {
-        /// <summary>
-        /// 이건 못살리는 에러(수)
-        /// </summary>
-        PanicError = -1,
-        /// <summary>
-        /// 살릴만한 에러(수)
-        /// </summary>
-        DeniedError = 0,
-        /// <summary>
-        /// 백그라운드로 전달한 명령 성공(수)
-        /// </summary>
-        Success = 1,
-        /// <summary>
-        /// 호스트가 생성되었음(수)
-        /// </summary>
-        CreateHost = 2,
-        /// <summary>
-        /// 주위 피어를 찾았음(수)
-        /// </summary>
-        FoundPeer = 3,
-        /// <summary>
-        /// 주위 피어가 사라짐(수)
-        /// </summary>
-        RemovePeer = 4,
-        /// <summary>
-        /// 채팅방에 참여하고 싶음(송)
-        /// </summary>
-        JoinGossip = 5,
-        /// <summary>
-        /// 채팅방에서 나가고 싶음(송)
-        /// </summary>
-        ExitGossip = 6,
-        /// <summary>
-        /// 메시지를 게시하고 싶음(송)
-        /// </summary>
-        Publish = 7,
-        /// <summary>
-        /// 메시지가 왔음(수)
-        /// </summary>
-        GotGossip = 8,
     }
 }
