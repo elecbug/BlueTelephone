@@ -75,6 +75,7 @@ jobs:
         run: |
           if git diff --name-only HEAD~1 HEAD | grep -q '^version$'; then
             echo "VERSION_CHANGED=true" >> $GITHUB_ENV
+            echo "VERSION=$(cat version)" >> $GITHUB_ENV
           else
             echo "VERSION_CHANGED=false" >> $GITHUB_ENV
           fi
@@ -93,8 +94,7 @@ jobs:
         id: set_release_info
         run: |
           if [[ "${{ env.COMMIT_MESSAGE }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "RELEASE_TAG=$(echo ${{ env.COMMIT_MESSAGE }} | grep -o '^v[0-9]\+\.[0-9]\+\.[0-9]\+')" >> $GITHUB_ENV
-            echo "RELEASE_NAME=BlueTelephone-${{ env.RELEASE_TAG }}" >> $GITHUB_ENV
+            echo "RELEASE_NAME=BlueTelephone-${{ env.VERSION }}" >> $GITHUB_ENV
           fi
 
       - name: Stop if commit message doesn't contain version
@@ -138,13 +138,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.VERSION }}
           release_name: ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: false
 
       - name: Upload Combined Release Asset
-        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
+        if: env.VERSION != '' && env.VERSION_CHANGED == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
