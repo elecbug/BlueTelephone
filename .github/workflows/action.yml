@@ -74,11 +74,7 @@ jobs:
         id: version_changed
         run: |
             echo "VERSION=$(cat version)" >> $GITHUB_ENV
-
-      - name: Get the latest commit message
-        id: get_commit_message
-        run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_ENV
-
+            
       - name: Set Release Tag and Name
         id: set_release_info
         run: echo "RELEASE_NAME=BlueTelephone-${{ env.VERSION }}" >> $GITHUB_ENV
