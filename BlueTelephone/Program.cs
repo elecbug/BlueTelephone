@@ -1,3 +1,5 @@
+using BlueTelephone.Foreground;
+
 namespace BlueTelephone
 {
     internal static class Program

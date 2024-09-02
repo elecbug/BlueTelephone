@@ -1,4 +1,4 @@
-﻿namespace BlueTelephone
+﻿namespace BlueTelephone.Foreground
 {
     partial class MainForm
     {

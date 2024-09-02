@@ -5,8 +5,9 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using BlueTelephone.Background;
+using BlueTelephone.Foreground;
 
-namespace BlueTelephone
+namespace BlueTelephone.Foreground
 {
     public partial class MainForm : Form
     {
@@ -80,26 +81,35 @@ namespace BlueTelephone
         private List<List<string>> Closers { get; set; } = new List<List<string>>();
 
         /// <summary>
+        /// 그룹과 이름을 사용할 때 기본 옵션으로 사용했는지 여부
+        /// </summary>
+        private (bool, bool) UsingDefaultSetting { get; set; } = (false, false);
+
+        /// <summary>
         /// 디자이너 호출
         /// </summary>
         public MainForm()
         {
             InitializeComponent();
             Designer();
+            UserSetting();
+        }
+
+        /// <summary>
+        /// 유저 세팅을 불러오는 메서드
+        /// </summary>
+        private void UserSetting()
+        {
+            GroupTextBox!.Text = User.Default.DefaultGroup;
+            NameTextBox!.Text = User.Default.DefaultName;
         }
 
         /// <summary>
         /// 폼의 형태를 정의하는 디자이너
         /// </summary>
-        public void Designer()
+        private void Designer()
         {
-            /// 폼이 닫힐 때 순서
-            /// TCP 닫기 -> EOF 발생 -> 아래에서 별도 처리 -> 백그라운드 종료
-            FormClosing += (s, e) =>
-            {
-                Client?.Close();
-                Process?.Kill();
-            };
+            FormClosing += MainFormClosing;
 
             /// 전체 메인 패널 정의
             TabControl container = new TabControl()
@@ -108,7 +118,7 @@ namespace BlueTelephone
                 Visible = true,
                 Dock = DockStyle.Fill,
             };
-            
+
             {
                 TabPage page = new TabPage()
                 {
@@ -208,7 +218,7 @@ namespace BlueTelephone
             }
 
             {
-                TabPage page = new TabPage() 
+                TabPage page = new TabPage()
                 {
                     Text = "Peers",
                 };
@@ -350,6 +360,32 @@ namespace BlueTelephone
 
                 GossipButton.Click += GossipButtonClick;
             }
+        }
+
+        /// <summary>
+        /// 폼 종료시 행위
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MainFormClosing(object? sender, EventArgs e)
+        {
+            /// 폼이 닫힐 때 순서
+            /// TCP 닫기 -> EOF 발생 -> 아래에서 별도 처리 -> 백그라운드 종료
+            
+            /// 현재 세팅 저장
+            if (UsingDefaultSetting.Item1 == false)
+                User.Default.DefaultGroup = GroupTextBox!.Text;
+            else
+                User.Default.DefaultGroup = "";
+            if (UsingDefaultSetting.Item2 == false)
+                User.Default.DefaultName = NameTextBox!.Text;
+            else
+                User.Default.DefaultName = "";
+
+            User.Default.Save();
+
+            Client?.Close();
+            Process?.Kill();
         }
 
         /// <summary>
@@ -543,13 +579,16 @@ namespace BlueTelephone
         private void ConnectButtonClick(object? sender, EventArgs e)
         {
             /// Group/Name 박스 등에 입력이 없다면 기본 값 삽입
+            /// 기본 세팅을 사용했다면 플래그 해놓고 User 세팅에 저장 X
             if (GroupTextBox?.Text == "")
             {
                 GroupTextBox.Text = "default";
+                UsingDefaultSetting = (true, UsingDefaultSetting.Item2);
             }
             if (NameTextBox?.Text == "")
             {
                 NameTextBox.Text = $"BT-{new Random().Next()}";
+                UsingDefaultSetting = (UsingDefaultSetting.Item1, true);
             }
 
             /// 연결 설정 관련 컨트롤들은 잠금
