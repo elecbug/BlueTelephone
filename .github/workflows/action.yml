@@ -70,11 +70,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Check if version file was changed
+        id: version_changed
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^version$'; then
+            echo "VERSION_CHANGED=true" >> $GITHUB_ENV
+          else
+            echo "VERSION_CHANGED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Stop if version file was not changed
+        if: env.VERSION_CHANGED == 'false'
+        run: echo "version file was not changed. Skipping release."
+
       - name: Get the latest commit message
+        if: env.VERSION_CHANGED == 'true'
         id: get_commit_message
         run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_ENV
 
       - name: Set Release Tag and Name
+        if: env.VERSION_CHANGED == 'true'
         id: set_release_info
         run: |
           if [[ "${{ env.COMMIT_MESSAGE }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
@@ -83,25 +98,25 @@ jobs:
           fi
 
       - name: Stop if commit message doesn't contain version
-        if: env.RELEASE_TAG == ''
+        if: env.RELEASE_TAG == '' && env.VERSION_CHANGED == 'true'
         run: echo "No version tag found in commit message. Skipping release."
 
       - name: Download C# Build Artifacts
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         uses: actions/download-artifact@v4
         with:
           name: csharp-build
           path: cs
 
       - name: Download Go Build Artifacts
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         uses: actions/download-artifact@v4
         with:
           name: go-build
           path: go
 
       - name: Prepare Release Folder
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         run: |
           mkdir publish
           ls -l
@@ -109,15 +124,15 @@ jobs:
           cp go/* publish/
 
       - name: Install zip utility
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         run: sudo apt-get install -y zip
         
       - name: Zip Release Files
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         run: zip -r release.zip publish/*
 
       - name: Create Release
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -129,7 +144,7 @@ jobs:
           prerelease: false
 
       - name: Upload Combined Release Asset
-        if: env.RELEASE_TAG != ''
+        if: env.RELEASE_TAG != '' && env.VERSION_CHANGED == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
