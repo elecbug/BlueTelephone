@@ -2,8 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - master  # master 브랜치에 푸시할 때 트리거
+    paths: [ 'version' ]
+  workflow_dispatch:
 
 jobs:
   Build-CS:
